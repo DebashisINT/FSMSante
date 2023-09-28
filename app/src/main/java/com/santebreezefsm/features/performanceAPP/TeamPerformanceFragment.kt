@@ -73,6 +73,7 @@ import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 /**
@@ -172,6 +173,21 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
     private lateinit var tv_frag_own_performance_headerCountNotproductnotsell:TextView
     private lateinit var  rv_product_nosell_taken_from_last3months:RecyclerView
     private lateinit var cv_frag_own_performance_noproductSell:CardView
+
+    private lateinit var iv_frag_performance_MTDinfo: ImageView
+
+    private lateinit var iv_frag_performance_atteninfo: ImageView
+    private lateinit var iv_frag_performance_threemonthinfo: ImageView
+    private lateinit var iv_frag_performance_activityageinginfo: ImageView
+    private lateinit var iv_frag_performance_partywisesalesinfo: ImageView
+    private lateinit var iv_frag_performance_headerCountinfo: ImageView
+    private lateinit var iv_frag_performance_headerCountNotvisitedinfo: ImageView
+    private lateinit var iv_frag_performance_headerCountNotproductnotsellinfo: ImageView
+    private lateinit var iv_frag_performance_headerCountNotcollectioninfo: ImageView
+    private lateinit var iv_frag_performance_headerCount_zeroOrderinfo: ImageView
+    private lateinit var iv_frag_performance_headerCount_noVisitinfo: ImageView
+    private lateinit var iv_frag_performance_last10info: ImageView
+
 
 
     private lateinit var NoOrderTakenList: ArrayList<NoOrderTakenShop>
@@ -342,6 +358,34 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
 
 
         // end 8.0  v 4.1.6 Saheli mantis 26349 New Feature in Performance Insights 16-06-2023
+
+        iv_frag_performance_atteninfo = view.findViewById(R.id.iv_frag_performance_atteninfo)
+        iv_frag_performance_threemonthinfo = view.findViewById(R.id.iv_frag_performance_threemonthinfo)
+        iv_frag_performance_last10info = view.findViewById(R.id.iv_frag_performance_last10info)
+        iv_frag_performance_activityageinginfo = view.findViewById(R.id.iv_frag_performance_activityageinginfo)
+        iv_frag_performance_partywisesalesinfo = view.findViewById(R.id.iv_frag_performance_partywisesalesinfo)
+        iv_frag_performance_headerCountinfo = view.findViewById(R.id.iv_frag_performance_headerCountinfo)
+        iv_frag_performance_headerCountNotvisitedinfo = view.findViewById(R.id.iv_frag_performance_headerCountNotvisitedinfo)
+        iv_frag_performance_headerCountNotproductnotsellinfo = view.findViewById(R.id.iv_frag_performance_headerCountNotproductnotsellinfo)
+        iv_frag_performance_headerCountNotcollectioninfo = view.findViewById(R.id.iv_frag_performance_headerCountNotcollectioninfo)
+        iv_frag_performance_headerCount_zeroOrderinfo = view.findViewById(R.id.iv_frag_performance_headerCount_zeroOrderinfo)
+        iv_frag_performance_headerCount_noVisitinfo = view.findViewById(R.id.iv_frag_performance_headerCount_noVisitinfo)
+        iv_frag_performance_MTDinfo = view.findViewById(R.id.iv_frag_performance_MTDinfo)
+
+
+        iv_frag_performance_MTDinfo.setOnClickListener(this)
+        iv_frag_performance_atteninfo.setOnClickListener(this)
+        iv_frag_performance_threemonthinfo.setOnClickListener(this)
+        iv_frag_performance_last10info.setOnClickListener(this)
+        iv_frag_performance_activityageinginfo.setOnClickListener(this)
+        iv_frag_performance_partywisesalesinfo.setOnClickListener(this)
+        iv_frag_performance_headerCountinfo.setOnClickListener(this)
+        iv_frag_performance_headerCountNotvisitedinfo.setOnClickListener(this)
+        iv_frag_performance_headerCountNotproductnotsellinfo.setOnClickListener(this)
+        iv_frag_performance_headerCountNotcollectioninfo.setOnClickListener(this)
+        iv_frag_performance_headerCount_zeroOrderinfo.setOnClickListener(this)
+        iv_frag_performance_headerCount_noVisitinfo.setOnClickListener(this)
+
     }
 
     private fun callAttendanceListApi(attendanceReq: AttendanceRequest, firstDate:String, lastDate:String, daysInMonth:Int) {
@@ -354,6 +398,8 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
                     val attendanceList = result as AttendanceResponse
                     if (attendanceList.status == NetworkConstant.SUCCESS) {
                         atten_ll_frag_team_per.visibility = View.VISIBLE
+                        iv_frag_performance_atteninfo.visibility = View.VISIBLE
+                        iv_frag_performance_attenshare.visibility = View.VISIBLE
                         no_data_found_tv_frag_team_performance.visibility = View.GONE
                         attendanceLists = attendanceList.shop_list!!
 //                        val filteredAttendanceRecords = attendanceList.shop_list!!.filter { it.login_date!! in formattedFirstDate..formattedLastDate && it.Isonleave!!.equals("false")  }
@@ -368,12 +414,16 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
                     } else if (attendanceList.status == NetworkConstant.SESSION_MISMATCH) {
                         loadNotProgress()
                         atten_ll_frag_team_per.visibility = View.GONE
+                        iv_frag_performance_attenshare.visibility = View.GONE
+                        iv_frag_performance_atteninfo.visibility = View.GONE
                         ll_mtd_view.visibility = View.GONE
                         ll_last3month_view.visibility = View.GONE
                         Toaster.msgShort(mContext, "Something went wrong")
                     } else if (attendanceList.status == NetworkConstant.NO_DATA) {
                         loadNotProgress()
                         atten_ll_frag_team_per.visibility = View.GONE
+                        iv_frag_performance_attenshare.visibility = View.GONE
+                        iv_frag_performance_atteninfo.visibility = View.GONE
                         ll_mtd_view.visibility = View.GONE
                         ll_last3month_view.visibility = View.GONE
                         ll_activityageing_frag_own.visibility = View.GONE
@@ -401,6 +451,64 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
             R.id.iv_frag_performance_attenshare->{
                 ShareDataAsPdf("Attendance REPORT")
             }
+            R.id.iv_frag_performance_MTDinfo -> {
+                iButtonText(
+                    "1. Total Order Value : Total order value of current month \n" +
+                            "2. Total Order Count : Total order count of current month \n "+
+                            "3. Average Order Value : (Total order value of current month / Total order count of current month) \n"+
+                            "4. Average Order Count : (Total order count of current month / Present date of current month) \n")
+            }R.id.iv_frag_performance_atteninfo -> {
+            iButtonText(
+                "1. Present : Total count of attendance of last month\n" +
+                        "2. Not Logged In : Total count of not logged in of last month \n")
+        }R.id.iv_frag_performance_threemonthinfo  -> {
+            iButtonText(
+                "Last 3 months Comparative Average Order Value : (Total order value of the month / Total no of days of the month) \n"
+            )
+        }R.id.iv_frag_performance_last10info -> {
+            iButtonText(
+                "1. Total Order Value : Total value of last 10 orders  \n" +
+                        "2. Total Order Count : Total order count of last 10 order  \n"+
+                        "3. Average Order Value : (Total value of last 10 orders / Total no of orders) \n"
+            )
+        }R.id.iv_frag_performance_activityageinginfo -> {
+            iButtonText(
+                "1. Last Visit : No of days since last visit \n" +
+                        "2. Most Recent Visit : Last date of visit \n"+
+                        "3. Last Order : No of days since last order \n"+
+                        "4. Last Collection : No of days since last collection \n")
+        }R.id.iv_frag_performance_partywisesalesinfo -> {
+            iButtonText(
+                "Total Sales Value : Total sum of Sales Value \n" )
+        }R.id.iv_frag_performance_headerCountinfo -> {
+            iButtonText(
+                "Total Party Count : No of parties not placed order in last 3 months \n"
+            )
+        }R.id.iv_frag_performance_headerCountNotvisitedinfo -> {
+            iButtonText(
+                "Total Party Count : No of parties not visited in last 3 months \n"
+
+            )
+        }R.id.iv_frag_performance_headerCountNotproductnotsellinfo -> {
+            iButtonText(
+                "Total Product Count : No of non selling product in last 3 months \n"
+
+            )
+        }R.id.iv_frag_performance_headerCountNotcollectioninfo -> {
+            iButtonText(
+                "Total Party Count : No of parties where collection not received from last 3 months \n"
+
+            )
+        }R.id.iv_frag_performance_headerCount_zeroOrderinfo -> {
+            iButtonText(
+                "Total Party Count : No of parties not placed order \n"
+            )
+        }R.id.iv_frag_performance_headerCount_noVisitinfo -> {
+            iButtonText(
+                "1. Total Party Count : No of parties not visited \n"
+            )            }
+
+
             R.id.iv_frag_performance_MTDshare->{
                 ShareDataAsPdf("MTD")
             }
@@ -1636,7 +1744,7 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
                                             obj.shop_name!!,
                                             obj.owner_contact_no!!,
                                             obj.address!!,
-                                            "",
+                                            obj.owner_name!!,
                                             obj.type!!,
                                             orderDate
                                         )
@@ -1693,6 +1801,7 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
 
     }
 
+    @SuppressLint("SuspiciousIndentation")
     private fun noCollectionMadeListOfShop() {
         val calendar = Calendar.getInstance()
         calendar.add(Calendar.MONTH, -3)
@@ -1715,8 +1824,12 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
                 var finalShopCollL :ArrayList<NoCollActivityInshop> = ArrayList()
                 for(i in 0..finalShopL.size-1) {
                     var obj = shopList.data!!.shop_list!!.filter { it.shop_id.equals(finalShopL.get(i)) }.first()
-                    finalShopCollL.add(NoCollActivityInshop(obj.shop_id!!, obj.shop_name!!, obj.owner_contact_no!!,obj.address!!,"",obj.type!!))
-                    println("visited_tag"+finalShopCollL.size)
+                    try{
+                        finalShopCollL.add(NoCollActivityInshop(obj.shop_id!!, obj.shop_name!!, obj.owner_contact_no!!,obj.address!!,obj.owner_name!!,obj.type!!,obj.last_visit_date!!))
+                        println("visited_tag"+finalShopCollL.size)
+                    }catch (ex:Exception){
+                        ex.printStackTrace()
+                    }
                 }
 
                 uiThread {
@@ -1830,17 +1943,27 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
                     var shopActityResponse = result as ShopActivityResponse
                     if (shopActityResponse.status == "200") {
                         doAsync {
+                            var arrShopIdFromApi : ArrayList<String> = ArrayList()
                             for(i in 0..shopActityResponse.date_list!!.size-1){
                                  shopVistedList = shopActityResponse.date_list!!.get(i).shop_list as ArrayList<ShopActivityResponseShopList>
+                                for(j in 0..shopVistedList.size-1){
+                                    if(shopVistedList.get(j).Is_Newshopadd == false){
+                                        arrShopIdFromApi.add(shopVistedList.get(j).shopid.toString())
+                                    }
+                                }
                             }
                             var filterVisitedIDList = shopVistedList.map { shopVistedList -> shopVistedList.visited_date!!.split("T").get(0) }
                             var userShopL = shopList.data!!.shop_list!!.map { it.shop_id } as ArrayList<String>
                             var finalShopL: List<String> = userShopL.minus(filterVisitedIDList) as ArrayList<String>
 
+                            var arrShopIdFromApiDistinct = arrShopIdFromApi.distinct()
+                            var filterFL = userShopL.filterNot { it in arrShopIdFromApiDistinct }as ArrayList<String>
+                            finalShopL = filterFL
+
                             finalLl = ArrayList()
                             for(i in 0..finalShopL.size-1) {
                                 var obj = shopList.data!!.shop_list!!.filter { it.shop_id.equals(finalShopL.get(i)) }.first()
-                                finalLl.add(NoVisitedActivityInshop(obj.shop_id!!, obj.shop_name!!, obj.owner_contact_no!!,obj.address!!,"",obj.type!!,obj.last_visit_date!!))
+                                finalLl.add(NoVisitedActivityInshop(obj.shop_id!!, obj.shop_name!!, obj.owner_contact_no!!,obj.address!!,obj.owner_name!!,obj.type!!,obj.last_visit_date!!))
                                 println("visited_tag"+finalLl.size)
                             }
                             uiThread {
@@ -1873,5 +1996,28 @@ class TeamPerformanceFragment: BaseFragment(), View.OnClickListener {
         )
     }
 
-
+    fun iButtonText(text:String){
+        val simpleDialog = Dialog(mContext)
+        simpleDialog.setCancelable(false)
+        simpleDialog.getWindow()!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        simpleDialog.setContentView(R.layout.dialog_info)
+        val dialogHeader = simpleDialog.findViewById(R.id.dialog_cancel_order_header_TV) as AppCustomTextView
+        // val dialog_yes_no_headerTV = simpleDialog.findViewById(R.id.dialog_yes_no_headerTV) as AppCustomTextView
+        // dialog_yes_no_headerTV.text = "Hi "+Pref.user_name!!+"!"
+        dialogHeader.text = text
+        // val dialogYes = simpleDialog.findViewById(R.id.tv_dialog_yes_no_yes) as AppCustomTextView
+        val dialogNo = simpleDialog.findViewById(R.id.cancel_info_icon) as ImageView
+        /*
+                dialogYes.setOnClickListener({ view ->
+                    simpleDialog.cancel()
+                    CustomStatic.NewOrderTotalCartItem = 0
+                 //   super.onBackPressed();
+                    //(mContext as DashboardActivity).loadFragment(FragType.NewOrderScrOrderDetailsFragment, false, NewOrderScrOrderDetailsFragment.shop_id)
+                })
+        */
+        dialogNo.setOnClickListener({ view ->
+            simpleDialog.cancel()
+        })
+        simpleDialog.show()
+    }
 }

@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit
 /**
  * Created by Pratishruti on 28-11-2017.
  */
-
 class NetworkConstant {
     //Base URL
     companion object {

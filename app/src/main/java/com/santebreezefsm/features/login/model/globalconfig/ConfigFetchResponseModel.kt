@@ -158,6 +158,22 @@ class ConfigFetchResponseModel : BaseResponse() {
 
     var IsUpdateVisitDataInTodayTable:Boolean?=null
 
+
+    var IsShowWhatsAppIconforVisit:Boolean?=null
+    var IsAutomatedWhatsAppSendforRevisit:Boolean?=null
+
     var ShopSyncIntervalInMinutes:String? = ""
+
+    var IsAllowBackdatedOrderEntry:Boolean?=null
+    var Order_Past_Days:Int?=null
+
+    var Show_distributor_scheme_with_Product:Boolean?=null
+
+    var MultiVisitIntervalInMinutes:String? = ""
+
+    var GSTINPANMandatoryforSHOPTYPE4:Boolean?=null
+    var FSSAILicNoEnableInShop:Boolean?=null
+    var FSSAILicNoMandatoryInShop4:Boolean?=null
+
 
 }

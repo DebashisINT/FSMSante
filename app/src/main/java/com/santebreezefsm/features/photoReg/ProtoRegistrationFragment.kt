@@ -3,8 +3,6 @@ package com.santebreezefsm.features.photoReg
 import android.Manifest
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-import android.R.attr.password
-import android.accounts.AccountManager.KEY_PASSWORD
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.Dialog
@@ -19,8 +17,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
-import android.os.*
+import android.os.Build
 import android.os.Build.VERSION.SDK_INT
+import android.os.Bundle
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -41,16 +43,18 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.android.volley.AuthFailureError
-import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.Response
-import com.android.volley.VolleyError
-import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import com.santebreezefsm.MySingleton
 import com.santebreezefsm.R
-import com.santebreezefsm.app.*
+import com.santebreezefsm.app.AppDatabase
+import com.santebreezefsm.app.MaterialSearchView
+import com.santebreezefsm.app.NetworkConstant
+import com.santebreezefsm.app.NewFileUtils
+import com.santebreezefsm.app.Pref
+import com.santebreezefsm.app.SearchListener
+import com.santebreezefsm.app.domain.VisitRevisitWhatsappStatus
 import com.santebreezefsm.app.types.FragType
 import com.santebreezefsm.app.uiaction.IntentActionable
 import com.santebreezefsm.app.utils.AppUtils
@@ -65,7 +69,13 @@ import com.santebreezefsm.features.myjobs.model.WIPImageSubmit
 import com.santebreezefsm.features.photoReg.adapter.AdapterUserList
 import com.santebreezefsm.features.photoReg.adapter.PhotoRegUserListner
 import com.santebreezefsm.features.photoReg.api.GetUserListPhotoRegProvider
-import com.santebreezefsm.features.photoReg.model.*
+import com.santebreezefsm.features.photoReg.model.AadhaarSubmitData
+import com.santebreezefsm.features.photoReg.model.DeleteUserPicResponse
+import com.santebreezefsm.features.photoReg.model.GetAllAadhaarResponse
+import com.santebreezefsm.features.photoReg.model.GetUserListResponse
+import com.santebreezefsm.features.photoReg.model.UpdateUserNameModel
+import com.santebreezefsm.features.photoReg.model.UpdateUserNameResponse
+import com.santebreezefsm.features.photoReg.model.UserListResponseModel
 import com.santebreezefsm.features.photoReg.present.UpdateDSTypeStatusDialog
 import com.santebreezefsm.features.reimbursement.presentation.FullImageDialog
 import com.santebreezefsm.widgets.AppCustomEditText
@@ -73,18 +83,30 @@ import com.santebreezefsm.widgets.AppCustomTextView
 import com.downloader.Error
 import com.downloader.OnDownloadListener
 import com.downloader.PRDownloader
-import com.squareup.picasso.*
+import com.google.gson.JsonParser
+import com.itextpdf.text.pdf.PdfName.XML
+import com.squareup.picasso.Cache
+import com.squareup.picasso.LruCache
+import com.squareup.picasso.MemoryPolicy
+import com.squareup.picasso.NetworkPolicy
+import com.squareup.picasso.Picasso
 import com.squareup.picasso.Picasso.RequestTransformer
 import com.themechangeapp.pickimage.PermissionHelper
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
+import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
 import java.io.FileInputStream
-import java.util.*
+import java.util.Locale
 
 
 class ProtoRegistrationFragment : BaseFragment(), View.OnClickListener {
@@ -190,7 +212,6 @@ class ProtoRegistrationFragment : BaseFragment(), View.OnClickListener {
         progress_wheel.spin()
         Handler(Looper.getMainLooper()).postDelayed({
             callUSerListApi()
-            //whatsappApi()
         }, 3000)
 
         //startVoiceInput()
@@ -198,49 +219,8 @@ class ProtoRegistrationFragment : BaseFragment(), View.OnClickListener {
     }
     // 1.0 MemberListFragment AppV 4.0.7 mantis 0025683 start
 
-    private fun whatsappApi(){
-        try {
-            try{
-                val stringRequest: StringRequest = object : StringRequest(Request.Method.POST, "https://theultimate.io/WAApi/send",
-                        Response.Listener<String?> { response ->
-                            var t = response
-                        },
-                        Response.ErrorListener { error ->
-                            var e = error.toString()
-                        })
-                {
-                        override fun getParams(): Map<String, String>? {
-                            val params: MutableMap<String, String> = HashMap()
-                            params.put("userid", "eurobondwa")
-                            params.put("msg", "Dear Suman,\n" +
-                                    "Please find the below data for login\n" +
-                                    "Thanks\n" +
-                                    "Regards,\n" +
-                                    "*Team Eurobond*")
-                            params.put("wabaNumber", "917888488891")
-                            params.put("output", "json")
-                            params.put("mobile", "919830916971")
-                            params.put("sendMethod", "quick")
-                            params.put("msgType", "text")
-                            params.put("templateName", "registered_users_details")
-                            return params
-                        }
-                    override fun getHeaders(): MutableMap<String, String> {
-                        val params: MutableMap<String, String> = HashMap()
-                        params["apikey"] = "36328e9735f7012988e6ed58f9fffaec4c7a79eb"
-                        return params
-                    }
-                    }
-                MySingleton.getInstance(mContext.applicationContext)!!.addToRequestQueue(stringRequest)
 
-            }catch (ex:Exception){
-                ex.printStackTrace()
-            }
 
-        }catch (ex:Exception){
-            ex.printStackTrace()
-        }
-    }
 
     private fun startVoiceInput() {
         val intent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -267,8 +247,21 @@ class ProtoRegistrationFragment : BaseFragment(), View.OnClickListener {
 
     private var permissionUtils: PermissionUtils? = null
     private fun initPermissionCheck() {
+        //begin mantis id 26741 Storage permission updation Suman 22-08-2023
+        var permissionList = arrayOf<String>( Manifest.permission.CAMERA)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            permissionList += Manifest.permission.READ_MEDIA_IMAGES
+            permissionList += Manifest.permission.READ_MEDIA_AUDIO
+            permissionList += Manifest.permission.READ_MEDIA_VIDEO
+        }else{
+            permissionList += Manifest.permission.WRITE_EXTERNAL_STORAGE
+            permissionList += Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        //end mantis id 26741 Storage permission updation Suman 22-08-2023
         permissionUtils = PermissionUtils(mContext as Activity, object : PermissionUtils.OnPermissionListener {
             override fun onPermissionGranted() {
+                var grant = true
                 /*if(SDK_INT >= 30){
                     if (!Environment.isExternalStorageManager()){
                         requestPermission()
@@ -285,8 +278,8 @@ class ProtoRegistrationFragment : BaseFragment(), View.OnClickListener {
             override fun onPermissionNotGranted() {
                 (mContext as DashboardActivity).showSnackMessage(getString(R.string.accept_permission))
             }
-
-        }, arrayOf<String>(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
+            // mantis id 26741 Storage permission updation Suman 22-08-2023
+        },permissionList)// arrayOf<String>(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
     }
 
     fun onRequestPermission(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

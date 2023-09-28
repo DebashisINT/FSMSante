@@ -1228,7 +1228,7 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
 
     @SuppressLint("WrongConstant")
     private fun initAdapter() {
-        averageShopListAdapter = AverageShopListAdapter(mContext, ShopActivityEntityList, object : AverageShopListClickListener {
+        averageShopListAdapter = AverageShopListAdapter(mContext, ShopActivityEntityList,selectedDate, object : AverageShopListClickListener {
             override fun onSyncClick(position: Int) {
 
                 val shop = AppDatabase.getDBInstance()!!.addShopEntryDao().getShopDetail(ShopActivityEntityList[position].shopid)
@@ -1281,7 +1281,12 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
 
                 }
                 else{
-                    (this as DashboardActivity).showSnackMessage(getString(R.string.no_internet))
+                    try{
+                        Toaster.msgShort(mContext,getString(R.string.no_internet))
+                        //(this as DashboardActivity).showSnackMessage(getString(R.string.no_internet))
+                    }catch (ex:Exception){
+                        ex.printStackTrace()
+                    }
                 }
 
             }
@@ -1302,7 +1307,7 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
                 var shopWiseWhatsObj = AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.getByShopIDDate(shop_id,AppUtils.getCurrentDateForShopActi())
                 var shopObj: AddShopDBModelEntity = AppDatabase.getDBInstance()!!.addShopEntryDao().getShopByIdN(shop_id)
                 if(AppUtils.isOnline(mContext)){
-                    whatsappApi(shopWiseWhatsObj!!,shopObj)
+                    whatsappApi(shopWiseWhatsObj!!,shopObj,shopWiseWhatsObj.isNewShop)
                 }else{
                     Toaster.msgShort(mContext, "Your network connection is offine. Make it online to proceed.")
                 }
@@ -1314,9 +1319,29 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
         shopList.adapter = averageShopListAdapter
     }
 
-    private fun whatsappApi(obj : VisitRevisitWhatsappStatus,shopObj: AddShopDBModelEntity){
-
+    private fun whatsappApi(obj : VisitRevisitWhatsappStatus,shopObj: AddShopDBModelEntity,isNewShop:Boolean){
         try{
+            var msgBody = ""
+            var templateName = ""
+            if(isNewShop){
+                msgBody= "Hey there! \n" +
+                        "\n" +
+                        "Thanks for connecting with (${Pref.user_name} - ${Pref.UserLoginContactID})\n" +
+                        "\n" +
+                        "We're thrilled to have you on board! Explore our website to discover a world of stunning ACP designs with unbeatable quality, and unmatched performance. Let's create something extraordinary together!\n" +
+                        "https://www.eurobondacp.com/download-catalogues\n\n" +
+                        "\n" +
+                        "*Team Eurobond*\n"
+                templateName = "incoming_call_response"
+            }else {
+                msgBody= "Hey there!\n" +
+                        "Hope you had a successful meeting with (${Pref.user_name} - ${Pref.UserLoginContactID})\n" +
+                        "We’ll be happy to assist you further with any inquiries or support you may require.\n" +
+                        "*Team Eurobond*\n"
+                templateName = "incoming_call_response_2"
+            }
+
+
                 val stringRequest: StringRequest = object : StringRequest(
                     Request.Method.POST, "https://theultimate.io/WAApi/send",
                     Response.Listener<String?> { response ->
@@ -1324,13 +1349,15 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
                         var resp = JsonParser.parseString(response)
                         var statusCode = resp.asJsonObject.get("statusCode").toString().drop(1).dropLast(1)
                         var statusMsg = resp.asJsonObject.get("reason").toString().drop(1).dropLast(1)
+                        var transId = resp.asJsonObject.get("transactionId").toString().drop(1).dropLast(1)
+                        if(transId == null){
+                            transId = ""
+                        }
 
                         if(statusCode.equals("200",ignoreCase = true) && statusMsg.equals("success",ignoreCase = true)){
-                            AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.
-                            updateWhatsStatus(true,"Sent Successfully",obj.sl_no)
+                            AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.updateWhatsStatus(true,"Sent Successfully",obj.sl_no,transId)
                         }else{
-                            AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.
-                            updateWhatsStatus(false,statusMsg.toString(),obj.sl_no)
+                            AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.updateWhatsStatus(false,statusMsg.toString(),obj.sl_no,transId)
                         }
 
                         val simpleDialog = Dialog(mContext)
@@ -1338,7 +1365,7 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
                         simpleDialog.getWindow()!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                         simpleDialog.setContentView(R.layout.dialog_ok)
                         val dialogHeader = simpleDialog.findViewById(R.id.dialog_yes_header_TV) as AppCustomTextView
-                        dialogHeader.text = "Whatsapp message sent ${statusMsg}"
+                        dialogHeader.text = "Sent succesfully."
                         val dialogYes = simpleDialog.findViewById(R.id.tv_dialog_yes) as AppCustomTextView
                         dialogYes.setOnClickListener({ view ->
                             simpleDialog.cancel()
@@ -1354,18 +1381,14 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
                     override fun getParams(): Map<String, String>? {
                         val params: MutableMap<String, String> = HashMap()
                         params.put("userid", "eurobondwa")
-                        params.put("msg", "Dear Suman,\n" +
-                                "Please find the below data for login\n" +
-                                "Thanks\n" +
-                                "Regards,\n" +
-                                "*Team Eurobond*")
+                        params.put("msg", msgBody)
                         params.put("wabaNumber", "917888488891")
                         params.put("output", "json")
-                        params.put("mobile", "919830916971")
-                        //params.put("mobile", "91${shopObj.ownerContactNumber}")
+                        //params.put("mobile", "918017845376")
+                        params.put("mobile", "91${obj.contactNo}")
                         params.put("sendMethod", "quick")
                         params.put("msgType", "text")
-                        params.put("templateName", "registered_users_details")
+                        params.put("templateName", templateName)
                         return params
                     }
                     override fun getHeaders(): MutableMap<String, String> {
@@ -1482,7 +1505,14 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
             addShopData.isShopDuplicate=shop.isShopDuplicate
 
             addShopData.purpose=shop.purpose
-
+//start AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
+            try {
+                addShopData.FSSAILicNo = shop.FSSAILicNo
+            }catch (ex:Exception){
+                ex.printStackTrace()
+                addShopData.FSSAILicNo = ""
+            }
+//end AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
             callAddShopApi(addShopData, shop.shopImageLocalPath, shop.doc_degree, position)
             //}
         } catch (e: Exception) {
@@ -2725,6 +2755,14 @@ class AverageShopFragment : BaseFragment(), DatePickerListener, View.OnClickList
                    addShopData.isShopDuplicate=mAddShopDBModelEntity.isShopDuplicate
 
                    addShopData.purpose=mAddShopDBModelEntity.purpose
+//start AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
+                   try {
+                       addShopData.FSSAILicNo = mAddShopDBModelEntity.FSSAILicNo
+                   }catch (ex:Exception){
+                       ex.printStackTrace()
+                       addShopData.FSSAILicNo = ""
+                   }
+//end AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
 
 
                    callAddShopApi(addShopData, mAddShopDBModelEntity.shopImageLocalPath, shopList, true,

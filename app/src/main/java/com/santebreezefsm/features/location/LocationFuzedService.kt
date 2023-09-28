@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -32,6 +33,7 @@ import com.santebreezefsm.R
 import com.santebreezefsm.app.*
 import com.santebreezefsm.app.Pref.tempDistance
 import com.santebreezefsm.app.domain.*
+import com.santebreezefsm.app.types.FragType
 import com.santebreezefsm.app.utils.AppUtils
 import com.santebreezefsm.app.utils.AppUtils.Companion.getDateTimeFromTimeStamp
 import com.santebreezefsm.app.utils.AppUtils.Companion.isLocationActivityUpdating
@@ -663,6 +665,7 @@ class LocationFuzedService : Service(), GoogleApiClient.ConnectionCallbacks, Goo
         //return
 
         try {
+            println("service_tag ${Pref.current_latitude.toString()} long - ${Pref.current_longitude.toString()}")
             if (location != null) {
                 // 8.0 LocationFuzedService AppV 4.0.7 Suman   18/03/2023 Location lat-long updation
                 AppUtils.mLocation = location
@@ -676,6 +679,24 @@ class LocationFuzedService : Service(), GoogleApiClient.ConnectionCallbacks, Goo
             //XLog.d("onLocationChanged : loc_update error" + AppUtils.getCurrentDateTime())
             Timber.d("onLocationChanged : loc_update error" + AppUtils.getCurrentDateTime())
         }
+
+        //begin Suman 21-09-2023 mantis id 0026837
+        try{
+            val packageName = "com.google.android.apps.maps"
+            val appInfo: ApplicationInfo = this.getPackageManager().getApplicationInfo(packageName, 0)
+            var appstatus = appInfo.enabled
+
+            if(!appstatus){
+                Timber.d("onLocationChanged : gmap app disable")
+            }else{
+                Timber.d("onLocationChanged : gmap app enable")
+            }
+            //val pInfo = this.packageManager.getPackageInfo("com.google.android.apps.maps", PackageManager.GET_PERMISSIONS)
+            //val version = pInfo.versionName
+        }catch (ex:Exception){
+            ex.printStackTrace()
+        }
+        //end Suman 21-09-2023 mantis id 0026837
 
 
         var tempLoc: Location = Location("")
@@ -4104,6 +4125,11 @@ class LocationFuzedService : Service(), GoogleApiClient.ConnectionCallbacks, Goo
             try {
                 var obj = AppDatabase.getDBInstance()!!.userLocationDataDao().getLastRecord()
                 finalDistance = obj.distance
+
+                //begin 26-09-2023 Suman mantis id 26857
+                finalDistance = "0.0"
+                //end 26-09-2023 Suman mantis id 26857
+
             } catch (ex: Exception) {
                 finalDistance = "0.0"
             }

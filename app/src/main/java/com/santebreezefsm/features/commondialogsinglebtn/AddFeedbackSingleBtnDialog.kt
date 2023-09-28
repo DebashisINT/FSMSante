@@ -320,7 +320,7 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
                 else {
                     dialogOk.isSelected = true
 
-                    if(Pref.IsAutomatedWhatsAppSendforRevisit){
+                    if(Pref.IsAutomatedWhatsAppSendforRevisit && sel_extraContPh!= ""){
                         var shopObj: AddShopDBModelEntity = AppDatabase.getDBInstance()!!.addShopEntryDao().getShopByIdN(mShopID)
                         var obj = VisitRevisitWhatsappStatus()
                         obj.shop_id = mShopID
@@ -334,7 +334,6 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
                         obj.isUploaded = false
                         AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.insert(obj)
 
-
                         if(AppUtils.isOnline(mContext)){
                             var shopWiseWhatsObj = AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.getByShopIDDate(mShopID,AppUtils.getCurrentDateForShopActi())
                             try{
@@ -345,13 +344,17 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
                                         var resp = JsonParser.parseString(response)
                                         var statusCode = resp.asJsonObject.get("statusCode").toString().drop(1).dropLast(1)
                                         var statusMsg = resp.asJsonObject.get("reason").toString().drop(1).dropLast(1)
+                                        var transId = resp.asJsonObject.get("transactionId").toString().drop(1).dropLast(1)
+                                        if(transId == null){
+                                            transId = ""
+                                        }
 
                                         if(statusCode.equals("200",ignoreCase = true) && statusMsg.equals("success",ignoreCase = true)){
                                             AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.
-                                            updateWhatsStatus(true,"Sent Successfully",shopWiseWhatsObj!!.sl_no)
+                                            updateWhatsStatus(true,"Sent Successfully",shopWiseWhatsObj!!.sl_no,transId)
                                         }else{
                                             AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.
-                                            updateWhatsStatus(false,statusMsg.toString(),shopWiseWhatsObj!!.sl_no)
+                                            updateWhatsStatus(false,statusMsg.toString(),shopWiseWhatsObj!!.sl_no,transId)
                                         }
                                     },
                                     Response.ErrorListener { error ->
@@ -361,18 +364,17 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
                                     override fun getParams(): Map<String, String>? {
                                         val params: MutableMap<String, String> = HashMap()
                                         params.put("userid", "eurobondwa")
-                                        params.put("msg", "Dear Suman,\n" +
-                                                "Please find the below data for login\n" +
-                                                "Thanks\n" +
-                                                "Regards,\n" +
-                                                "*Team Eurobond*")
+                                        params.put("msg", "Hey there!\n" +
+                                                "Hope you had a successful meeting with (${Pref.user_name} - ${Pref.UserLoginContactID})\n" +
+                                                "We’ll be happy to assist you further with any inquiries or support you may require.\n" +
+                                                "*Team Eurobond*\n")
                                         params.put("wabaNumber", "917888488891")
                                         params.put("output", "json")
-                                        params.put("mobile", "919830916971")
-                                        //params.put("mobile", "91${shopObj.ownerContactNumber}")
+                                        //params.put("mobile", "919830916971")
+                                        params.put("mobile", "91${obj.contactNo}")
                                         params.put("sendMethod", "quick")
                                         params.put("msgType", "text")
-                                        params.put("templateName", "registered_users_details")
+                                        params.put("templateName", "incoming_call_response_2")
                                         return params
                                     }
                                     override fun getHeaders(): MutableMap<String, String> {
@@ -406,7 +408,7 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
                             else
                                 mListener.onOkClick(tv_remarks_dropdown.text.toString().trim(), nextVisitDate, filePath,et_approxvalue_name.text.toString(),ProsId,sel_extraContName,sel_extraContPh)
                         }
-                    }, 500)
+                    }, 1700)
 
 
                 }
@@ -554,6 +556,20 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
 
     private var permissionUtils: PermissionUtils? = null
     private fun initPermissionCheckOne() {
+
+        //begin mantis id 26741 Storage permission updation Suman 22-08-2023
+        var permissionList = arrayOf<String>( Manifest.permission.CAMERA)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            permissionList += Manifest.permission.READ_MEDIA_IMAGES
+            permissionList += Manifest.permission.READ_MEDIA_AUDIO
+            permissionList += Manifest.permission.READ_MEDIA_VIDEO
+        }else{
+            permissionList += Manifest.permission.WRITE_EXTERNAL_STORAGE
+            permissionList += Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+//end mantis id 26741 Storage permission updation Suman 22-08-2023
+
         permissionUtils = PermissionUtils(mContext as Activity, object : PermissionUtils.OnPermissionListener {
             override fun onPermissionGranted() {
                 showPictureDialog()
@@ -562,8 +578,8 @@ class AddFeedbackSingleBtnDialog : DialogFragment(), View.OnClickListener {
             override fun onPermissionNotGranted() {
                 (mContext as DashboardActivity).showSnackMessage(getString(R.string.accept_permission))
             }
-
-        }, arrayOf<String>(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
+// mantis id 26741 Storage permission updation Suman 22-08-2023
+        },permissionList)// arrayOf<String>(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
     }
 
     fun showPictureDialog() {

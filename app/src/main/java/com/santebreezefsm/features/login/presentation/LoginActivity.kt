@@ -122,6 +122,7 @@ import com.santebreezefsm.features.privacypolicy.PrivacypolicyWebviewFrag
 import com.santebreezefsm.features.quotation.api.QuotationRepoProvider
 import com.santebreezefsm.features.quotation.model.BSListResponseModel
 import com.santebreezefsm.features.quotation.model.QuotationListResponseModel
+import com.santebreezefsm.features.shopdetail.presentation.api.EditShopRepoProvider
 import com.santebreezefsm.features.stock.api.StockRepositoryProvider
 import com.santebreezefsm.features.stock.model.NewStockListResponseModel
 import com.santebreezefsm.features.stockAddCurrentStock.api.ShopAddStockProvider
@@ -156,6 +157,7 @@ import java.io.*
 import java.nio.channels.FileChannel
 import java.util.*
 import java.util.concurrent.ExecutionException
+import kotlin.collections.ArrayList
 
 
 /**Permission NameDISABLE KEYGUARD Status
@@ -744,6 +746,38 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                                     Pref.ShopSyncIntervalInMinutes = configResponse.ShopSyncIntervalInMinutes!!
                                 //End 20.0 LoginActivity v 4.1.6 Tufan 11/07/2023 mantis 26546 revisit sync time
 
+                                if (configResponse.IsShowWhatsAppIconforVisit != null)
+                                    Pref.IsShowWhatsAppIconforVisit = configResponse.IsShowWhatsAppIconforVisit!!
+                                if (configResponse.IsAutomatedWhatsAppSendforRevisit != null)
+                                    Pref.IsAutomatedWhatsAppSendforRevisit = configResponse.IsAutomatedWhatsAppSendforRevisit!!
+
+                                if (configResponse.IsAllowBackdatedOrderEntry != null)
+                                    Pref.IsAllowBackdatedOrderEntry = configResponse.IsAllowBackdatedOrderEntry!!
+                                try{
+                                    Pref.Order_Past_Days = configResponse.Order_Past_Days!!.toString()
+                                }catch (ex:Exception){
+                                    Pref.Order_Past_Days = "0"
+                                }
+
+                                //Begin 15.0 Pref v 4.1.6 Tufan 22/08/2023 mantis 26649 Show distributor scheme with Product
+                                if (configResponse.Show_distributor_scheme_with_Product != null)
+                                    Pref.Show_distributor_scheme_with_Product = configResponse.Show_distributor_scheme_with_Product!!
+                                //End 15.0 Pref v 4.1.6 Tufan 22/08/2023 mantis 26649 Show distributor scheme with Product
+
+                                //Begin 16.0 Pref v 4.1.6 Tufan 07/09/2023 mantis 26785 Multi visit Interval in Minutes Against the Same Shop
+                                if (configResponse.MultiVisitIntervalInMinutes != null)
+                                    Pref.MultiVisitIntervalInMinutes = configResponse.MultiVisitIntervalInMinutes!!
+                                //End 16.0 Pref v 4.1.6 Tufan 07/09/2023 mantis 26785 Multi visit Interval in Minutes Against the Same Shop
+
+                                //Begin v 4.1.6 Tufan 21/09/2023 mantis 26812 AND 26813  FSSAI Lic No and GSTINPANMandatoryforSHOPTYPE4 In add shop page edit
+                                if (configResponse.GSTINPANMandatoryforSHOPTYPE4 != null)
+                                    Pref.GSTINPANMandatoryforSHOPTYPE4 = configResponse.GSTINPANMandatoryforSHOPTYPE4!!
+                                if (configResponse.FSSAILicNoEnableInShop != null)
+                                    Pref.FSSAILicNoEnableInShop = configResponse.FSSAILicNoEnableInShop!!
+                                if (configResponse.FSSAILicNoMandatoryInShop4 != null)
+                                    Pref.FSSAILicNoMandatoryInShop4 = configResponse.FSSAILicNoMandatoryInShop4!!
+                                //Edit v 4.1.6 Tufan 21/09/2023 mantis 26812 AND 26813  FSSAI Lic No and GSTINPANMandatoryforSHOPTYPE4 In add shop page edit
+
                                 /*if (configResponse.willShowUpdateDayPlan != null)
                                     Pref.willShowUpdateDayPlan = configResponse.willShowUpdateDayPlan!!
 
@@ -1126,7 +1160,16 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                                 }
                             } else {
                                /* progress_wheel.stopSpinning()*/
-                                checkToCallAreaListApi()
+                                if(AppDatabase.getDBInstance()?.productListDao()?.getAll()!!.isEmpty()){
+                                    checkToCallAreaListApi()
+                                }else{
+                                    AppDatabase.getDBInstance()?.productRateDao()?.deleteAll()
+                                    val rateList: ArrayList<ProductRateEntity> = AppDatabase.getDBInstance()?.productRateDao()?.getAllBlank() as ArrayList<ProductRateEntity>
+                                    AppDatabase.getDBInstance()?.productRateDao()?.insertAll(rateList)
+                                    checkToCallAreaListApi()
+                                }
+
+                                //checkToCallAreaListApi()
                             }
 
                         }, { error ->
@@ -3452,7 +3495,19 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
     }
 
     private fun initPermissionCheck() {
+        //begin mantis id 26741 Storage permission updation Suman 22-08-2023
+        var permissionList = arrayOf<String>( Manifest.permission.READ_PHONE_STATE, Manifest.permission.RECORD_AUDIO,)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            permissionList += Manifest.permission.READ_MEDIA_IMAGES
+            permissionList += Manifest.permission.READ_MEDIA_AUDIO
+            permissionList += Manifest.permission.READ_MEDIA_VIDEO
+            permissionList += Manifest.permission.POST_NOTIFICATIONS
+        }else{
+            permissionList += Manifest.permission.WRITE_EXTERNAL_STORAGE
+            permissionList += Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+//end mantis id 26741 Storage permission updation Suman 22-08-2023
         permissionUtils = PermissionUtils(this, object : PermissionUtils.OnPermissionListener {
             @TargetApi(Build.VERSION_CODES.M)
             override fun onPermissionGranted() {
@@ -3491,8 +3546,16 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                     System.exit(0)
                 },3000)*/
             }
+// mantis id 26741 Storage permission updation Suman 22-08-2023
+        },permissionList /*arrayOf<String>(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.READ_PHONE_STATE, Manifest.permission.RECORD_AUDIO,
 
-        }, arrayOf<String>(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.READ_PHONE_STATE, Manifest.permission.RECORD_AUDIO))
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_AUDIO,
+            Manifest.permission.READ_MEDIA_VIDEO
+
+            )*/
+
+        )
     }
 
     fun fileManagePermii() {
@@ -3590,7 +3653,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                 getIMEI()
         }*/
         takeActionOnGeofence()
-        checkForFingerPrint()
+        //checkForFingerPrint()
     }
 
     private fun checkForFingerPrint() {
@@ -3604,14 +3667,17 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                 override fun isFingerPrintSupported(status: Boolean) {
                     if (status) {
                         Log.e("LoginActivity", "========Device support fingerprint===========")
+                        println("LoginActivity_finger"+ "========Device support fingerprint===========")
                     } else {
                         Log.e("LoginActivity", "==========Device does not support fingerprint===========")
+                        println("LoginActivity_finger"+ "========Device does not support fingerprint===========")
                         isFingerPrintSupported = false
                     }
                 }
 
                 override fun onSuccess(signal: CancellationSignal?) {
                     Log.e("LoginActivity", "============Fingerprint accepted=============")
+                    println("LoginActivity_finger"+ "========Fingerprint accepted===========")
 
                     if (fingerprintDialog != null && fingerprintDialog?.isVisible!!) {
                         fingerprintDialog?.dismiss()
@@ -3632,7 +3698,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
 
                 override fun onError(msg: String) {
                     Log.e("LoginActivity", "Fingerprint error=====> " + msg)
-
+                    println("LoginActivity_finger"+ "=error======")
                     when {
                         msg.equals("Fingerprint operation cancelled.", ignoreCase = true) -> {
                         }
@@ -3649,6 +3715,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
             })
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                println("LoginActivity_finger"+ " >M")
                 CheckFingerPrint().FingerprintHandler().doAuth()
             }
         } catch (e: Exception) {
@@ -4279,6 +4346,20 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
     }
 
     private fun initCameraPermissionCheck() {
+
+        //begin mantis id 26741 Storage permission updation Suman 22-08-2023
+        var permissionList = arrayOf<String>( Manifest.permission.CAMERA)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            permissionList += Manifest.permission.READ_MEDIA_IMAGES
+            permissionList += Manifest.permission.READ_MEDIA_AUDIO
+            permissionList += Manifest.permission.READ_MEDIA_VIDEO
+        }else{
+            permissionList += Manifest.permission.WRITE_EXTERNAL_STORAGE
+            permissionList += Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+//end mantis id 26741 Storage permission updation Suman 22-08-2023
+
         permissionUtils = PermissionUtils(this, object : PermissionUtils.OnPermissionListener {
             override fun onPermissionGranted() {
                 captureFrontImage()
@@ -4288,7 +4369,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                 showSnackMessage(getString(R.string.accept_permission))
             }
 
-        }, arrayOf<String>(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
+        },permissionList) //arrayOf<String>(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
     }
 
     private fun captureFrontImage() {
@@ -4497,7 +4578,7 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
         Timber.d("LoginApiRequest : " + "\n, IMEI :" + Pref.imei + ", Time :" + AppUtils.getCurrentDateTime() + ", Version :" + AppUtils.getVersionName(this) +
                 ", username : " + username + ", password : " + password + ", lat : " + Pref.latitude + ", long : " + Pref.longitude + ", location : " + location +
                 ", device token : " + Pref.deviceToken)
-
+        Pref.UserLoginContactID = username
         val repository = LoginRepositoryProvider.provideLoginRepository()
         /*progress_wheel.spin()*/
         BaseActivity.compositeDisposable.add(
@@ -6917,6 +6998,16 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
             shopObj.isShopDuplicate=shop_list[i].isShopDuplicate
 
             shopObj.purpose=shop_list[i].purpose
+            //start AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
+            try {
+                shopObj.FSSAILicNo = shop_list[i].FSSAILicNo
+            }catch (ex:Exception){
+                ex.printStackTrace()
+                shopObj.FSSAILicNo = ""
+            }
+//end AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
+
+
 
             /*GSTIN & PAN NUMBER*/
             shopObj.gstN_Number=shop_list[i].GSTN_Number
@@ -7131,6 +7222,16 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                 shopObj.isShopDuplicate=shop_list[i].isShopDuplicate
 
                 shopObj.purpose=shop_list[i].purpose
+                //start AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
+                try {
+                    shopObj.FSSAILicNo = shop_list[i].FSSAILicNo
+                }catch (ex:Exception){
+                    ex.printStackTrace()
+                    shopObj.FSSAILicNo = ""
+                }
+//end AppV 4.2.2 tufan    20/09/2023 FSSAI Lic No Implementation 26813
+
+
                 shopObj.isOwnshop = false
 
                 list.add(shopObj)
@@ -7402,6 +7503,44 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
 
     }
 
+    private fun fetchWhatsData(){
+        var isDataP = AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.getAll()
+        if(isDataP?.size!=0){
+            gotoHomeActivity()
+        }else if(Pref.IsShowWhatsAppIconforVisit || Pref.IsAutomatedWhatsAppSendforRevisit){
+            val repository = EditShopRepoProvider.provideEditShopWithoutImageRepository()
+            BaseActivity.compositeDisposable.add(
+                repository.whatsAppStatusFetch(Pref.user_id!!.toString())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribeOn(Schedulers.io())
+                    .subscribe({ result ->
+                        val resp = result as WhatsappApiFetchData
+                        if(resp.status.equals("200")){
+
+                            var list = resp.shop_whatsapp_api_list
+                            list.forEach {
+                                it.whatsappSentMsg = if(it.whatsappSentMsg == null) "" else it.whatsappSentMsg
+                                it.date = AppUtils.getFormatedDateNew(it.date!!.toString(),"dd-mm-yyyy","yyyy-mm-dd")!!
+                            }
+
+                            AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.insertAll(resp.shop_whatsapp_api_list)
+                            AppDatabase.getDBInstance()?.visitRevisitWhatsappStatusDao()!!.updateWhatsStatusUpload()
+                            Handler().postDelayed(Runnable {
+                                gotoHomeActivity()
+                            }, 1000)
+                        }else{
+                            gotoHomeActivity()
+                        }
+                    }, { error ->
+                        error.printStackTrace()
+                        gotoHomeActivity()
+                    })
+            )
+        }else {
+            gotoHomeActivity()
+        }
+    }
+
 
     private fun gotoHomeActivity() {
        /* Pref.IsShowEmployeePerformanceGlobal = true
@@ -7471,7 +7610,8 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
             Timber.d("loc_check checkLocationFetch")
             fetchActivityList()
         }else{
-            gotoHomeActivity()
+            //gotoHomeActivity()
+            fetchWhatsData()
         }
 
     }
@@ -7489,7 +7629,8 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
             callFetchLocationApi(fetchLocReq)
     } else{
             Timber.d("loc_check else callFetchLocationApi")
-            gotoHomeActivity()
+            //gotoHomeActivity()
+            fetchWhatsData()
         }
     }
 
@@ -7505,18 +7646,21 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
                         Timber.d("loc_check success")
                         convertToModelAndSave(shopList.location_details, shopList.visit_distance)
                     }else {
-                        gotoHomeActivity()
+                        //gotoHomeActivity()
+                        fetchWhatsData()
                     }
                 }, { error ->
                     error.printStackTrace()
-                    gotoHomeActivity()
+                    //gotoHomeActivity()
+                    fetchWhatsData()
                 })
         )
     }
 
     private fun convertToModelAndSave(location_details: List<LocationData>?, visitDistance: String) {
     if (location_details!!.isEmpty()){
-        gotoHomeActivity()
+        //gotoHomeActivity()
+        fetchWhatsData()
     }
     else{
         //Begin 15.0  LoginActivity AppV 4.1.3 Suman    11/05/2023  26099
@@ -7596,7 +7740,8 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
             }
 
             uiThread {
-                gotoHomeActivity()
+                //gotoHomeActivity()
+                fetchWhatsData()
             }
         }
         //End of 15.0  LoginActivity AppV 4.1.3 Suman    11/05/2023  26099
@@ -8912,9 +9057,14 @@ class LoginActivity : BaseActivity(), View.OnClickListener, LocationListener {
             .into(iv_loader_spin)
     }
     private fun loadNotProgress(){
-        enableScreen()
-        iv_background_color_set.visibility = View.GONE
-        iv_loader_spin.visibility = View.GONE
+
+        try {
+            enableScreen()
+            iv_background_color_set.visibility = View.GONE
+            iv_loader_spin.visibility = View.GONE
+        }catch (ex : Exception){
+            Timber.d("loadNotProgress error = ${ex.message}")
+        }
     }
     
 

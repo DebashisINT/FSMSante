@@ -80,8 +80,9 @@ public class CustomStatic {
     public static Boolean IsBackFromNewOptiCart = false;
 
     public static String lead_msgBody = "";
-    public static String lead_msgType = "";
     public static String lead_msgLeadDate = "";
     public static String lead_msgLeadEnquiry = "";
+
+    public static Boolean IsTeamAllParty = false;
 
 }
